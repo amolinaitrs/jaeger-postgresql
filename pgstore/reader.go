@@ -48,6 +48,8 @@ func (r *Reader) GetServices(ctx context.Context) ([]string, error) {
 
 // GetOperations returns all operations for a specific service traced by Jaeger
 func (r *Reader) GetOperations(ctx context.Context, param spanstore.OperationQueryParameters) ([]spanstore.Operation, error) {
+	r.logger.Warn("GetOperations called")
+
 	var operations []Operation
 	err := r.db.Model(&operations).Order("operation_name ASC").Select()
 	ret := make([]spanstore.Operation, 0, len(operations))
@@ -62,17 +64,22 @@ func (r *Reader) GetOperations(ctx context.Context, param spanstore.OperationQue
 
 // GetTrace takes a traceID and returns a Trace associated with that traceID
 func (r *Reader) GetTrace(ctx context.Context, traceID model.TraceID) (*model.Trace, error) {
+	r.logger.Warn("GetTrace called", "traceID.Low", traceID.Low, "traceID.High", traceID.High)
+
 	builder := &whereBuilder{where: "", params: make([]interface{}, 0)}
 
 	if traceID.Low > 0 {
 		builder.andWhere(traceID.Low, "trace_id_low = ?")
 	}
-	if traceID.High > 0 {
-		builder.andWhere(traceID.Low, "trace_id_high = ?")
-	}
+	//if traceID.High > 0 {
+	//	builder.andWhere(traceID.High, "trace_id_high = ?")
+	//}
+	r.logger.Warn("GetTrace builder:", "builder.where", builder.where)
 
 	var spans []Span
-	err := r.db.Model(&spans).Where(builder.where, builder.params...).Limit(1).Select()
+	query := r.db.Model(&spans).Where(builder.where, builder.params...).Limit(1)
+	r.logger.Warn("GetTrace query:", "query", query)
+	err := query.Select()
 	ret := make([]*model.Span, 0, len(spans))
 	ret2 := make([]model.Trace_ProcessMapping, 0, len(spans))
 	for _, span := range spans {
@@ -80,13 +87,17 @@ func (r *Reader) GetTrace(ctx context.Context, traceID model.TraceID) (*model.Tr
 		ret2 = append(ret2, model.Trace_ProcessMapping{
 			ProcessID: span.ProcessID,
 			Process: model.Process{
-				ServiceName: span.Service.ServiceName,
+				ServiceName: "ServiceName", //span.Service.ServiceName,
 				Tags:        mapToModelKV(span.ProcessTags),
 			},
 		})
 	}
 
-	return &model.Trace{Spans: ret, ProcessMap: ret2}, err
+	trace := &model.Trace{Spans: ret, ProcessMap: ret2}
+
+	r.logger.Warn("GetTrace got:", "trace", trace)
+
+	return trace, err
 }
 
 func buildTraceWhere(query *spanstore.TraceQueryParameters) *whereBuilder {
@@ -118,11 +129,16 @@ func buildTraceWhere(query *spanstore.TraceQueryParameters) *whereBuilder {
 
 // FindTraces retrieve traces that match the traceQuery
 func (r *Reader) FindTraces(ctx context.Context, query *spanstore.TraceQueryParameters) ([]*model.Trace, error) {
+	r.logger.Warn("FindTraces called", "query", query)
+
 	traceIDs, err := r.FindTraceIDs(ctx, query)
 	ret := make([]*model.Trace, 0, len(traceIDs))
 	if err != nil {
 		return ret, err
 	}
+
+	r.logger.Warn("FindTraces found", "traceIDs", traceIDs)
+
 	grouping := make(map[model.TraceID]*model.Trace)
 	//idsLow := make([]uint64, 0, len(traceIDs))
 	for _, traceID := range traceIDs {
@@ -166,6 +182,8 @@ func (r *Reader) FindTraces(ctx context.Context, query *spanstore.TraceQueryPara
 
 // FindTraceIDs retrieve traceIDs that match the traceQuery
 func (r *Reader) FindTraceIDs(ctx context.Context, query *spanstore.TraceQueryParameters) (ret []model.TraceID, err error) {
+	r.logger.Warn("FindTraceIDs called", "query", query)
+
 	builder := buildTraceWhere(query)
 
 	limit := query.NumTraces
@@ -184,6 +202,8 @@ func (r *Reader) FindTraceIDs(ctx context.Context, query *spanstore.TraceQueryPa
 
 // GetDependencies returns all inter-service dependencies
 func (r *Reader) GetDependencies(endTs time.Time, lookback time.Duration) (ret []model.DependencyLink, err error) {
+	r.logger.Warn("GetDependencies called")
+
 	err = r.db.Model((*SpanRef)(nil)).
 		ColumnExpr("source_spans.service_id AS parent").
 		ColumnExpr("source_service.service_name AS parent_name").

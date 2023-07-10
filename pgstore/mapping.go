@@ -1,6 +1,9 @@
 package pgstore
 
-import "github.com/jaegertracing/jaeger/model"
+import (
+	"github.com/hashicorp/go-hclog"
+	"github.com/jaegertracing/jaeger/model"
+)
 
 type whereBuilder struct {
 	where  string
@@ -16,17 +19,26 @@ func (r *whereBuilder) andWhere(param interface{}, where string) {
 }
 
 func toModelSpan(span Span) *model.Span {
+
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Warn,
+		Name:       "jaeger-postgresql-toModelSpan",
+		JSONFormat: true,
+	})
+
+	logger.Warn("toModelSpan called", "span", span)
+
 	return &model.Span{
 		SpanID:        span.ID,
 		TraceID:       model.TraceID{Low: span.TraceIDLow, High: span.TraceIDHigh},
-		OperationName: span.Operation.OperationName,
+		OperationName: "OperationName", //span.Operation.OperationName,
 		Flags:         span.Flags,
 		StartTime:     span.StartTime,
 		Duration:      span.Duration,
 		Tags:          mapToModelKV(span.Tags),
 		ProcessID:     span.ProcessID,
 		Process: &model.Process{
-			ServiceName: span.Service.ServiceName,
+			ServiceName: "ServiceName", //span.Service.ServiceName,
 			Tags:        mapToModelKV(span.ProcessTags),
 		},
 		Warnings:   span.Warnings,
