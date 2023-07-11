@@ -74,7 +74,6 @@ func (r *Reader) GetTrace(ctx context.Context, traceID model.TraceID) (*model.Tr
 
 	var spans []Span
 	query := r.db.Model(&spans).Where(builder.where, builder.params...).Relation("Operation").Relation("Service") //.Limit(1)
-	r.logger.Warn("GetTrace query:", "query", query)
 	err := query.Select()
 	ret := make([]*model.Span, 0, len(spans))
 	ret2 := make([]model.Trace_ProcessMapping, 0, len(spans))
