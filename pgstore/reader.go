@@ -73,7 +73,7 @@ func (r *Reader) GetTrace(ctx context.Context, traceID model.TraceID) (*model.Tr
 	}
 
 	var spans []Span
-	query := r.db.Model(&spans).Where(builder.where, builder.params...).Relation("Operation").Relation("Service") //.Limit(1)
+	query := r.db.Model(&spans).Where(builder.where, builder.params...).Relation("Operation").Relation("Service").Relation("SpanRefs") //.Limit(1)
 	err := query.Select()
 	ret := make([]*model.Span, 0, len(spans))
 	ret2 := make([]model.Trace_ProcessMapping, 0, len(spans))
@@ -137,7 +137,7 @@ func (r *Reader) FindTraces(ctx context.Context, query *spanstore.TraceQueryPara
 		err = r.db.Model(&spans).Where("trace_id_low = ?", traceID.Low /*TODO high*/).
 			//Join("JOIN operations AS operation ON operation.id = span.operation_id").
 			//Join("JOIN services AS service ON service.id = span.service_id").
-			Relation("Operation").Relation("Service").Order("start_time ASC").Select()
+			Relation("Operation").Relation("Service").Relation("SpanRefs").Order("start_time ASC").Select()
 		if err != nil {
 			return ret, err
 		}

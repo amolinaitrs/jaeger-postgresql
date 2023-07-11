@@ -36,7 +36,7 @@ type Span struct {
 	ProcessID   string
 	ProcessTags map[string]interface{}
 	Warnings    []string
-	//References    []*SpanRef `pg:"fk:span_id"`
+	SpanRefs    []*SpanRef `pg:"rel:has-many,fk:source_span_id"`
 	//Logs          []*Log `pg:"fk:span_id"`
 }
 type Operation struct {

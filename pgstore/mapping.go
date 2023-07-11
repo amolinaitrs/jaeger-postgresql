@@ -19,6 +19,15 @@ func (r *whereBuilder) andWhere(param interface{}, where string) {
 
 func toModelSpan(span Span) *model.Span {
 
+	span_refs := make([]model.SpanRef, 0, len(span.SpanRefs))
+	for _, span_ref := range span.SpanRefs {
+		span_refs = append(span_refs, model.SpanRef{
+			TraceID: model.TraceID{Low: span_ref.TraceIDLow, High: span_ref.TraceIDHigh},
+			SpanID:  span_ref.ChildSpanID,
+			RefType: span_ref.RefType,
+		})
+	}
+
 	return &model.Span{
 		SpanID:        span.ID,
 		TraceID:       model.TraceID{Low: span.TraceIDLow, High: span.TraceIDHigh},
@@ -33,7 +42,7 @@ func toModelSpan(span Span) *model.Span {
 			Tags:        mapToModelKV(span.ProcessTags),
 		},
 		Warnings:   span.Warnings,
-		References: make([]model.SpanRef, 0),
+		References: span_refs,
 		Logs:       make([]model.Log, 0),
 	}
 }
