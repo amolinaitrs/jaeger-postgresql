@@ -130,14 +130,11 @@ func (r *Reader) FindTraces(ctx context.Context, query *spanstore.TraceQueryPara
 	}
 
 	grouping := make(map[model.TraceID]*model.Trace)
-	//idsLow := make([]uint64, 0, len(traceIDs))
 	for _, traceID := range traceIDs {
-		//idsLow = append(idsLow, traceID.Low)
 		var spans []Span
-		err = r.db.Model(&spans).Where("trace_id_low = ?", traceID.Low /*TODO high*/).
-			//Join("JOIN operations AS operation ON operation.id = span.operation_id").
-			//Join("JOIN services AS service ON service.id = span.service_id").
-			Relation("Operation").Relation("Service").Relation("SpanRefs").Order("start_time ASC").Select()
+		err = r.db.Model(&spans).Where("trace_id_low = ? and trace_id_high = ?", traceID.Low, traceID.High).
+			Relation("Operation").Relation("Service").Relation("SpanRefs").
+			Order("start_time ASC").Select()
 		if err != nil {
 			return ret, err
 		}
