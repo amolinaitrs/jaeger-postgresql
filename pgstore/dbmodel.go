@@ -22,13 +22,13 @@ type SpanRef struct {
 	RefType      model.SpanRefType `sql:",use_zero"`
 }
 type Span struct {
-	ID          model.SpanID
+	ID          model.SpanID `pg:",pk"`
 	TraceIDLow  uint64
 	TraceIDHigh uint64
 	Operation   *Operation
 	OperationID uint
 	Flags       model.Flags
-	StartTime   time.Time
+	StartTime   time.Time `pg:",pk"`
 	Duration    time.Duration
 	Tags        map[string]interface{}
 	Service     *Service
@@ -36,7 +36,7 @@ type Span struct {
 	ProcessID   string
 	ProcessTags map[string]interface{}
 	Warnings    []string
-	SpanRefs    []*SpanRef `pg:"rel:has-many,fk:source_span_id"`
+	SpanRefs    []*SpanRef `pg:",rel:has-many,fk:source_span_id"`
 	//Logs          []*Log `pg:"fk:span_id"`
 }
 type Operation struct {

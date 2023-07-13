@@ -40,7 +40,14 @@ func NewWriter(db *pg.DB, logger hclog.Logger) *Writer {
 	db.CreateTable(&Service{}, &orm.CreateTableOptions{})
 	db.CreateTable(&Operation{}, &orm.CreateTableOptions{})
 	db.CreateTable(&Span{}, &orm.CreateTableOptions{})
+	if _, err := db.Exec("SELECT * from create_hypertable('spans', 'start_time');"); err != nil {
+		w.logger.Warn("Couldn't use Timescale, queries will be slower...", "err", err)
+	}
 	db.CreateTable(&SpanRef{}, &orm.CreateTableOptions{})
+
+	if _, err := db.Exec("CREATE INDEX IDX_SPAN_REFS_SOURCE_SPAN_ID ON span_refs USING btree (source_span_id ASC NULLS LAST)"); err != nil {
+		w.logger.Warn("Couldn't create SPAN_REFS index, queries will be slower...", "err", err)
+	}
 	db.CreateTable(&Log{}, &orm.CreateTableOptions{})
 
 	//w.writeWG.Add(1)
@@ -85,7 +92,7 @@ func (w *Writer) WriteSpan(span *model.Span) error {
 		ProcessID:   span.ProcessID,
 		ProcessTags: mapModelKV(span.Process.Tags),
 		Warnings:    span.Warnings,
-	}).OnConflict("(id) DO UPDATE").Insert(); err != nil {
+	}).OnConflict("(id, start_time) DO UPDATE").Insert(); err != nil {
 		return err
 	}
 
